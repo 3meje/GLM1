@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProTrade X - Live Deriv API Connection</title>
+    <title>ProTrade X - Deriv API Connection</title>
     <style>
         :root {
             --bg-dark: #0e1117;
@@ -25,7 +25,7 @@
         /* Login Modal */
         #loginModal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); z-index: 2000;
+            background: rgba(0,0,0,0.9); z-index: 2000;
             display: flex; justify-content: center; align-items: center;
         }
         .login-box {
@@ -40,7 +40,8 @@
             width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border);
             background: var(--bg-dark); color: white; outline: none;
         }
-        .btn-full { width: 100%; padding: 12px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 4px; cursor: pointer; }
+        
+        .btn-full { width: 100%; padding: 12px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; }
         .btn-full:hover { opacity: 0.9; }
 
         /* App Structure */
@@ -77,7 +78,7 @@
         
         /* Notifications */
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: var(--bg-panel); padding: 15px; border-left: 4px solid var(--accent); border-radius: 4px; animation: slideIn 0.3s; min-width: 250px; }
+        .toast { background: var(--bg-panel); padding: 15px; border-left: 4px solid var(--accent); border-radius: 4px; animation: slideIn 0.3s; min-width: 250px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
 
     </style>
@@ -88,17 +89,21 @@
 <div id="loginModal">
     <div class="login-box">
         <h2>Deriv API Login</h2>
+        
         <div class="input-group">
-            <label>App ID</label>
-            <input type="number" id="appIdInput" placeholder="e.g., 1089" value="1089"> <!-- Default is a public testing ID, use your own -->
+            <label>App ID (String or Number)</label>
+            <!-- Removed type="number" to allow strings -->
+            <input type="text" id="appIdInput" placeholder="33tE4WfXZ2d9cfKoVjypW" value="">
         </div>
+        
         <div class="input-group">
-            <label>API Token (Read + Trade)</label>
-            <input type="password" id="apiTokenInput" placeholder="Paste token here">
+            <label>API Token</label>
+            <input type="text" id="apiTokenInput" placeholder="pat_..." value="">
         </div>
+        
         <button class="btn-full" onclick="connectToDeriv()">Connect & Login</button>
         <p style="margin-top:15px; font-size:0.8rem; color:#666; text-align:center;">
-            Warning: Real Trading involves financial risk. Use Demo tokens to test first.
+            Supports String and Numeric App IDs.
         </p>
     </div>
 </div>
@@ -165,7 +170,7 @@
             this.currentSymbol = 'R_100';
             this.pingInterval = null;
             this.tickHistory = [];
-            this.tickBuffer = []; // Buffer to build 1-second candles
+            this.tickBuffer = []; 
             this.onTickUpdate = null;
             this.onBalanceUpdate = null;
             this.onOpenContract = null;
@@ -176,7 +181,7 @@
             this.appId = appId;
             this.token = token;
             
-            // Standard Deriv WebSocket Endpoint
+            // Connect to WebSocket - Passing App ID as String if provided
             this.ws = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${appId}`);
 
             this.ws.onopen = () => {
@@ -198,7 +203,7 @@
         startPing() {
             this.pingInterval = setInterval(() => {
                 if(this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ ping: 1 }));
-            }, 10000); // Keepalive
+            }, 10000); 
         }
 
         authorize() {
@@ -207,19 +212,13 @@
 
         subscribeTicks(symbol) {
             this.currentSymbol = symbol;
-            // Forget all previous streams to clean up
             this.ws.send(JSON.stringify({ forget_all: "ticks" })); 
-            // Forget all proposals
             this.ws.send(JSON.stringify({ forget_all: "proposal" }));
-            
-            // Subscribe to new ticks
             this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             
-            // Clear local buffers
             this.tickBuffer = [];
             this.tickHistory = [];
             
-            // Get history for the chart (last 1000 ticks)
             this.ws.send(JSON.stringify({ 
                 ticks_history: symbol, 
                 count: 1000, 
@@ -233,7 +232,6 @@
             const stake = document.getElementById('stakeInput').value;
             const duration = document.getElementById('tickDuration').value;
             
-            // Direct Buy Request (Requires parameters object)
             const buyRequest = {
                 buy: 1,
                 price: parseFloat(stake),
@@ -265,8 +263,9 @@
             if (msgType === 'authorize') {
                 if (data.error) {
                     showToast(`Auth Failed: ${data.error.message}`, "error");
+                    document.getElementById('loginModal').style.display = 'flex';
                 } else {
-                    document.getElementById('balanceDisplay').innerText = `Balance: ${data.authorize.balance} USD`;
+                    document.getElementById('balanceDisplay').innerText = `Balance: ${data.authorize.balance} ${data.authorize.currency}`;
                     this.subscribeTicks(this.currentSymbol);
                 }
             }
@@ -274,13 +273,10 @@
                 this.processLiveTick(data.tick);
             }
             else if (msgType === 'history') {
-                // Initial batch of history
                 const prices = data.history.prices;
                 const times = data.history.times;
-                // Combine them
                 const historyTicks = prices.map((p, i) => ({ quote: p, epoch: times[i] }));
-                this.tickHistory = historyTicks; // Store full history
-                // Trigger chart redraw
+                this.tickHistory = historyTicks;
                 if(this.onTickUpdate) this.onTickUpdate(this.getAggregatedCandles());
             }
             else if (msgType === 'buy') {
@@ -288,78 +284,59 @@
                     showToast(`Trade Error: ${data.error.message}`, "error");
                 } else {
                     showToast(`Contract Bought: ${data.buy.contract_id}`, "success");
-                    // Subscribe to updates for this contract
                     this.subscribeToOpenContract(data.buy.contract_id);
                 }
             }
             else if (msgType === 'proposal_open_contract') {
                 const contract = data.proposal_open_contract;
                 if (contract.is_sold) {
-                    // Contract finished
                     const profit = contract.profit;
                     showToast(`Trade Closed: ${profit > 0 ? 'WIN' : 'LOSS'} ($${profit})`, profit > 0 ? "success" : "error");
-                    // Refresh balance
-                    this.authorize(); // Lazy way to update balance after trade
+                    this.authorize();
                 } else {
-                    // Update live P/L
                     if (this.onProfitUpdate) this.onProfitUpdate(contract);
                 }
             }
         }
 
         processLiveTick(tick) {
-            // 1. Add to history buffer
             this.tickHistory.push({ quote: tick.quote, epoch: tick.epoch });
             if(this.tickHistory.length > 1000) this.tickHistory.shift();
 
-            // 2. Logic for AI / Indicators runs on live tick
             if (this.onTickUpdate) {
                 const candles = this.getAggregatedCandles();
                 this.onTickUpdate(candles);
             }
         }
 
-        // Convert raw ticks into 1-second candles for the chart
         getAggregatedCandles() {
             const candles = [];
             let currentCandle = null;
 
-            // We iterate backwards from the latest tick to build candles
-            // Ideally, this should be optimized, but for 1000 ticks it's fast enough in JS
             for (let i = 0; i < this.tickHistory.length; i++) {
                 const tick = this.tickHistory[i];
-                const tickTime = Math.floor(tick.epoch); // floor to second
+                const tickTime = Math.floor(tick.epoch); 
 
                 if (!currentCandle) {
                     currentCandle = { 
-                        open: tick.quote, 
-                        high: tick.quote, 
-                        low: tick.quote, 
-                        close: tick.quote, 
-                        timestamp: tickTime 
+                        open: tick.quote, high: tick.quote, low: tick.quote, 
+                        close: tick.quote, timestamp: tickTime 
                     };
                 } else {
                     if (tickTime === currentCandle.timestamp) {
-                        // Still in same second
                         currentCandle.close = tick.quote;
                         if (tick.quote > currentCandle.high) currentCandle.high = tick.quote;
                         if (tick.quote < currentCandle.low) currentCandle.low = tick.quote;
                     } else {
-                        // New second started
                         candles.push(currentCandle);
                         currentCandle = { 
-                            open: tick.quote, 
-                            high: tick.quote, 
-                            low: tick.quote, 
-                            close: tick.quote, 
-                            timestamp: tickTime 
+                            open: tick.quote, high: tick.quote, low: tick.quote, 
+                            close: tick.quote, timestamp: tickTime 
                         };
                     }
                 }
             }
             if (currentCandle) candles.push(currentCandle);
-            
-            // Return in chronological order (oldest first)
             return candles;
         }
     }
@@ -369,10 +346,10 @@
     let candles = [];
     let isAiRunning = false;
 
-    // --- Charting (Reusable from previous logic) ---
+    // --- Charting ---
     const canvas = document.getElementById('chartCanvas');
     const ctx = canvas.getContext('2d');
-    let chartZoom = 50; // Show last 50 seconds
+    let chartZoom = 50; 
 
     function resizeCanvas() {
         canvas.width = canvas.parentElement.clientWidth;
@@ -413,18 +390,15 @@
             ctx.fillStyle = isBull ? '#0faf59' : '#ff444f';
             ctx.strokeStyle = isBull ? '#0faf59' : '#ff444f';
             
-            // Wick
             ctx.beginPath();
             ctx.moveTo(x + (candleWidth-gap)/2, yHigh);
             ctx.lineTo(x + (candleWidth-gap)/2, yLow);
             ctx.stroke();
 
-            // Body
             const h = Math.abs(yOpen - yClose) || 1;
             ctx.fillRect(x, Math.min(yOpen, yClose), candleWidth - gap, h);
         });
 
-        // Current Price Line
         if(candles.length > 0) {
             const last = candles[candles.length-1].close;
             const y = getY(last);
@@ -432,7 +406,6 @@
             ctx.setLineDash([5,5]);
             ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
             ctx.setLineDash([]);
-            
             ctx.fillStyle = '#fff';
             ctx.fillText(last.toFixed(2), width - 50, y - 5);
         }
@@ -440,16 +413,22 @@
 
     // --- Connection Handling ---
     function connectToDeriv() {
-        const appId = document.getElementById('appIdInput').value;
-        const token = document.getElementById('apiTokenInput').value;
+        const appIdInput = document.getElementById('appIdInput').value.trim();
+        const tokenInput = document.getElementById('apiTokenInput').value.trim();
 
-        if(!appId || !token) {
-            showToast("Please enter App ID and Token", "error");
+        if(!appIdInput || !tokenInput) {
+            showToast("Please enter both App ID and Token", "error");
             return;
         }
 
         document.getElementById('loginModal').style.display = 'none';
-        deriv.connect(appId, token);
+        
+        try {
+            deriv.connect(appIdInput, tokenInput);
+        } catch (e) {
+            showToast("Connection Error: " + e.message, "error");
+            document.getElementById('loginModal').style.display = 'flex';
+        }
     }
 
     function updateStatus(isConnected) {
@@ -474,18 +453,16 @@
         deriv.placeContract(type);
     }
 
-    // --- Indicator & AI Logic (Attached to Live Data) ---
+    // --- AI Logic ---
     deriv.onTickUpdate = (liveCandles) => {
         candles = liveCandles;
         drawChart();
-        
         if(isAiRunning && candles.length > 20) {
             runAiAnalysis(candles);
         }
     };
 
     function runAiAnalysis(candles) {
-        // Simple Momentum Strategy
         const len = candles.length;
         const current = candles[len-1].close;
         const prev = candles[len-2].close;
@@ -495,26 +472,23 @@
         let signal = "HOLD";
         let confidence = 0;
 
-        // Logic
         if (rsiVal < 30) {
-            signal = "CALL"; // Oversold
+            signal = "CALL"; 
             confidence = 80;
         } else if (rsiVal > 70) {
-            signal = "PUT"; // Overbought
+            signal = "PUT"; 
             confidence = 80;
         } else if (current > candles[len-5].close) {
-            signal = "CALL"; // Uptrend
+            signal = "CALL"; 
             confidence = 65;
         }
 
         const log = document.getElementById('aiLog');
         log.innerHTML = `> Price: ${current.toFixed(2)}<br>> RSI: ${rsiVal.toFixed(1)}<br>> Signal: ${signal} (${confidence}%)`;
         
-        // Auto Execute (Caution!)
         if (confidence >= 80) {
             log.innerHTML += `<br>> <strong>EXECUTING ${signal}...</strong>`;
             deriv.placeContract(signal);
-            // Debounce to prevent spam
             isAiRunning = false; 
             setTimeout(() => { if(document.getElementById('aiToggle').checked) isAiRunning = true; }, 5000);
         }
@@ -522,7 +496,6 @@
 
     function calculateRSI(data, period = 14) {
         if(data.length < period + 1) return [50];
-        // Simple RSI logic on close prices
         let gains = 0, losses = 0;
         for(let i=1; i<=period; i++) {
             const diff = data[data.length - i].close - data[data.length - i - 1].close;
@@ -538,7 +511,6 @@
         document.getElementById('aiLog').innerHTML += "<br>> AI " + (isAiRunning ? "Enabled" : "Disabled");
     }
 
-    // UI Helpers
     function showToast(msg, type="success") {
         const t = document.createElement('div');
         t.className = 'toast';
@@ -548,7 +520,6 @@
         setTimeout(() => t.remove(), 3000);
     }
 
-    // Update payouts dynamically (just a visual approximation for demo, use proposal API for exact)
     document.getElementById('stakeInput').addEventListener('change', (e) => {
         const val = parseFloat(e.target.value);
         document.getElementById('callPayout').innerText = `+ $${(val * 0.95).toFixed(2)}`;
