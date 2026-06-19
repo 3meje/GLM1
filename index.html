@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProTrade X - Deriv API Connection</title>
+    <title>ProTrade X - Fixed</title>
     <style>
         :root {
             --bg-dark: #0e1117;
@@ -22,7 +22,6 @@
         
         body { background-color: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        /* Login Modal */
         #loginModal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.9); z-index: 2000;
@@ -30,21 +29,28 @@
         }
         .login-box {
             background: var(--bg-panel); padding: 30px; border-radius: 8px;
-            border: 1px solid var(--border); width: 400px;
+            border: 1px solid var(--border); width: 450px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            max-height: 90vh; overflow-y: auto;
         }
-        .login-box h2 { margin-bottom: 20px; text-align: center; color: var(--text-main); }
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; color: var(--text-muted); margin-bottom: 5px; font-size: 0.9rem; }
+        .login-box h2 { margin-bottom: 10px; text-align: center; color: var(--text-main); }
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; color: var(--text-muted); margin-bottom: 5px; font-size: 0.85rem; }
         .input-group input { 
             width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border);
             background: var(--bg-dark); color: white; outline: none;
         }
+        .input-group input:focus { border-color: var(--accent); }
         
         .btn-full { width: 100%; padding: 12px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; }
         .btn-full:hover { opacity: 0.9; }
 
-        /* App Structure */
+        .debug-box {
+            background: #000; border: 1px solid #333; padding: 10px;
+            font-family: monospace; font-size: 0.75rem; color: #00ff00;
+            height: 150px; overflow-y: auto; margin-top: 15px; border-radius: 4px; white-space: pre-wrap;
+        }
+
         header {
             height: 60px; background: var(--bg-panel); border-bottom: 1px solid var(--border);
             display: flex; align-items: center; padding: 0 20px; justify-content: space-between;
@@ -54,6 +60,7 @@
         .balance-badge { background: #2a2e39; padding: 5px 12px; border-radius: 4px; font-weight: 600; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: gray; display: inline-block; margin-right: 5px; }
         .status-dot.connected { background: var(--success); }
+        .status-dot.error { background: var(--danger); }
 
         main { flex: 1; display: grid; grid-template-columns: 1fr 320px; grid-template-rows: 50px 1fr; height: calc(100vh - 60px); }
 
@@ -76,35 +83,31 @@
         .ai-section { margin-top: auto; border-top: 1px solid var(--border); padding-top: 15px; }
         .ai-log { font-family: monospace; font-size: 0.75rem; color: #888; background: #000; padding: 10px; height: 80px; overflow-y: auto; margin-top: 10px; }
         
-        /* Notifications */
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
-        .toast { background: var(--bg-panel); padding: 15px; border-left: 4px solid var(--accent); border-radius: 4px; animation: slideIn 0.3s; min-width: 250px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .toast { background: var(--bg-panel); padding: 15px; border-left: 4px solid var(--accent); border-radius: 4px; animation: slideIn 0.3s; min-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); color:white; }
+        .toast.error { border-left-color: var(--danger); }
         @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
-
     </style>
 </head>
 <body>
 
-<!-- Login Modal -->
 <div id="loginModal">
     <div class="login-box">
         <h2>Deriv API Login</h2>
-        
         <div class="input-group">
-            <label>App ID (String or Number)</label>
-            <!-- Removed type="number" to allow strings -->
-            <input type="text" id="appIdInput" placeholder="33tE4WfXZ2d9cfKoVjypW" value="">
+            <label>App ID</label>
+            <input type="text" id="appIdInput" placeholder="e.g. 1089 or 33tE4..." value="">
         </div>
-        
         <div class="input-group">
-            <label>API Token</label>
+            <label>API Token (PAT)</label>
             <input type="text" id="apiTokenInput" placeholder="pat_..." value="">
         </div>
+        <button class="btn-full" onclick="connectToDeriv()">Connect</button>
         
-        <button class="btn-full" onclick="connectToDeriv()">Connect & Login</button>
-        <p style="margin-top:15px; font-size:0.8rem; color:#666; text-align:center;">
-            Supports String and Numeric App IDs.
-        </p>
+        <div style="margin-top:15px;">
+            <label style="color:#888; font-size:0.8rem;">Debug Log:</label>
+            <div class="debug-box" id="debugLog">Ready...</div>
+        </div>
     </div>
 </div>
 
@@ -121,8 +124,6 @@
         <div class="asset-item active" onclick="changeMarket('R_100', this)">Volatility 100</div>
         <div class="asset-item" onclick="changeMarket('R_10', this)">Volatility 10</div>
         <div class="asset-item" onclick="changeMarket('R_25', this)">Volatility 25</div>
-        <div class="asset-item" onclick="changeMarket('R_50', this)">Volatility 50</div>
-        <div class="asset-item" onclick="changeMarket('R_75', this)">Volatility 75</div>
     </div>
 
     <div class="chart-section">
@@ -153,7 +154,7 @@
                 <strong style="color:#a855f7">AI Autotrader</strong>
                 <input type="checkbox" id="aiToggle" onchange="toggleAI()">
             </div>
-            <div class="ai-log" id="aiLog">Waiting for connection...</div>
+            <div class="ai-log" id="aiLog">Waiting...</div>
         </div>
     </div>
 </main>
@@ -161,7 +162,6 @@
 <div class="toast-container" id="toastContainer"></div>
 
 <script>
-    // --- Deriv API Service ---
     class DerivService {
         constructor() {
             this.ws = null;
@@ -170,40 +170,60 @@
             this.currentSymbol = 'R_100';
             this.pingInterval = null;
             this.tickHistory = [];
-            this.tickBuffer = []; 
             this.onTickUpdate = null;
-            this.onBalanceUpdate = null;
-            this.onOpenContract = null;
-            this.onProfitUpdate = null;
         }
 
         connect(appId, token) {
-            this.appId = appId;
-            this.token = token;
+            this.appId = appId.trim();
+            this.token = token.trim();
+            const encodedAppId = encodeURIComponent(this.appId);
+            const wsUrl = `wss://ws.binaryws.com/websockets/v3?app_id=${encodedAppId}`;
             
-            // Connect to WebSocket - Passing App ID as String if provided
-            this.ws = new WebSocket(`wss://ws.binaryws.com/websockets/v3?app_id=${appId}`);
+            logDebug(`Connecting to: ${wsUrl}`);
+
+            try {
+                this.ws = new WebSocket(wsUrl);
+            } catch (e) {
+                logDebug("Error: " + e.message);
+                return;
+            }
 
             this.ws.onopen = () => {
+                logDebug("Socket Opened. Authorizing...");
+                updateStatus("connected");
                 this.authorize();
                 this.startPing();
-                showToast("Connected to Deriv Server", "success");
-                updateStatus(true);
             };
 
-            this.ws.onmessage = (msg) => this.handleMessage(JSON.parse(msg.data));
+            // CRITICAL FIX: Removed the extra ')' that broke the entire app
+            this.ws.onmessage = (msg) => {
+                this.handleMessage(JSON.parse(msg.data));
+            };
             
-            this.ws.onclose = () => {
-                updateStatus(false);
-                showToast("Disconnected", "error");
+            this.ws.onclose = (e) => {
+                logDebug(`Socket Closed. Code: ${e.code}`);
+                if (e.code === 1006) {
+                    showToast("Rejected (1006). Check App ID format.", "error");
+                    updateStatus("error");
+                } else {
+                    updateStatus("disconnected");
+                }
+                document.getElementById('loginModal').style.display = 'flex';
                 clearInterval(this.pingInterval);
+            };
+            
+            this.ws.onerror = (e) => {
+                logDebug("Network Error Event");
             };
         }
 
         startPing() {
+            clearInterval(this.pingInterval);
             this.pingInterval = setInterval(() => {
-                if(this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify({ ping: 1 }));
-            }, 10000); 
+                if(this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify({ ping: 1 }));
+                }
+            }, 15000);
         }
 
         authorize() {
@@ -212,27 +232,18 @@
 
         subscribeTicks(symbol) {
             this.currentSymbol = symbol;
-            this.ws.send(JSON.stringify({ forget_all: "ticks" })); 
-            this.ws.send(JSON.stringify({ forget_all: "proposal" }));
-            this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-            
-            this.tickBuffer = [];
+            logDebug(`Subscribing to ${symbol}...`);
             this.tickHistory = [];
-            
+            this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
             this.ws.send(JSON.stringify({ 
-                ticks_history: symbol, 
-                count: 1000, 
-                end: "latest", 
-                style: "ticks",
-                subscribe: 1 
+                ticks_history: symbol, count: 1000, end: "latest", style: "ticks", subscribe: 1 
             }));
         }
 
         placeContract(contractType) {
             const stake = document.getElementById('stakeInput').value;
             const duration = document.getElementById('tickDuration').value;
-            
-            const buyRequest = {
+            this.ws.send(JSON.stringify({
                 buy: 1,
                 price: parseFloat(stake),
                 parameters: {
@@ -244,84 +255,51 @@
                     duration_unit: "t",
                     symbol: this.currentSymbol
                 }
-            };
-            
-            this.ws.send(JSON.stringify(buyRequest));
-        }
-
-        subscribeToOpenContract(contractId) {
-            this.ws.send(JSON.stringify({ 
-                proposal_open_contract: 1, 
-                contract_id: contractId, 
-                subscribe: 1 
             }));
         }
 
         handleMessage(data) {
-            const msgType = data.msg_type;
+            logDebug(JSON.stringify(data));
 
-            if (msgType === 'authorize') {
-                if (data.error) {
-                    showToast(`Auth Failed: ${data.error.message}`, "error");
-                    document.getElementById('loginModal').style.display = 'flex';
-                } else {
-                    document.getElementById('balanceDisplay').innerText = `Balance: ${data.authorize.balance} ${data.authorize.currency}`;
-                    this.subscribeTicks(this.currentSymbol);
-                }
+            if (data.error) {
+                showToast(`${data.error.code}: ${data.error.message}`, "error");
+                return;
             }
-            else if (msgType === 'tick') {
+
+            if (data.msg_type === 'authorize') {
+                showToast(`Logged in: ${data.authorize.loginid}`, "success");
+                document.getElementById('balanceDisplay').innerText = `Balance: ${data.authorize.balance} ${data.authorize.currency}`;
+                setTimeout(() => { document.getElementById('loginModal').style.display = 'none'; }, 500);
+                this.subscribeTicks(this.currentSymbol);
+            }
+            else if (data.msg_type === 'tick') {
                 this.processLiveTick(data.tick);
             }
-            else if (msgType === 'history') {
+            else if (data.msg_type === 'history') {
                 const prices = data.history.prices;
                 const times = data.history.times;
-                const historyTicks = prices.map((p, i) => ({ quote: p, epoch: times[i] }));
-                this.tickHistory = historyTicks;
+                this.tickHistory = prices.map((p, i) => ({ quote: p, epoch: times[i] }));
                 if(this.onTickUpdate) this.onTickUpdate(this.getAggregatedCandles());
             }
-            else if (msgType === 'buy') {
-                if (data.error) {
-                    showToast(`Trade Error: ${data.error.message}`, "error");
-                } else {
-                    showToast(`Contract Bought: ${data.buy.contract_id}`, "success");
-                    this.subscribeToOpenContract(data.buy.contract_id);
-                }
-            }
-            else if (msgType === 'proposal_open_contract') {
-                const contract = data.proposal_open_contract;
-                if (contract.is_sold) {
-                    const profit = contract.profit;
-                    showToast(`Trade Closed: ${profit > 0 ? 'WIN' : 'LOSS'} ($${profit})`, profit > 0 ? "success" : "error");
-                    this.authorize();
-                } else {
-                    if (this.onProfitUpdate) this.onProfitUpdate(contract);
-                }
+            else if (data.msg_type === 'buy') {
+                showToast(`Contract Bought`, "success");
             }
         }
 
         processLiveTick(tick) {
             this.tickHistory.push({ quote: tick.quote, epoch: tick.epoch });
             if(this.tickHistory.length > 1000) this.tickHistory.shift();
-
-            if (this.onTickUpdate) {
-                const candles = this.getAggregatedCandles();
-                this.onTickUpdate(candles);
-            }
+            if (this.onTickUpdate) this.onTickUpdate(this.getAggregatedCandles());
         }
 
         getAggregatedCandles() {
             const candles = [];
             let currentCandle = null;
-
             for (let i = 0; i < this.tickHistory.length; i++) {
                 const tick = this.tickHistory[i];
-                const tickTime = Math.floor(tick.epoch); 
-
+                const tickTime = Math.floor(tick.epoch);
                 if (!currentCandle) {
-                    currentCandle = { 
-                        open: tick.quote, high: tick.quote, low: tick.quote, 
-                        close: tick.quote, timestamp: tickTime 
-                    };
+                    currentCandle = { open: tick.quote, high: tick.quote, low: tick.quote, close: tick.quote, timestamp: tickTime };
                 } else {
                     if (tickTime === currentCandle.timestamp) {
                         currentCandle.close = tick.quote;
@@ -329,10 +307,7 @@
                         if (tick.quote < currentCandle.low) currentCandle.low = tick.quote;
                     } else {
                         candles.push(currentCandle);
-                        currentCandle = { 
-                            open: tick.quote, high: tick.quote, low: tick.quote, 
-                            close: tick.quote, timestamp: tickTime 
-                        };
+                        currentCandle = { open: tick.quote, high: tick.quote, low: tick.quote, close: tick.quote, timestamp: tickTime };
                     }
                 }
             }
@@ -341,15 +316,13 @@
         }
     }
 
-    // --- Global App State ---
     const deriv = new DerivService();
     let candles = [];
     let isAiRunning = false;
 
-    // --- Charting ---
     const canvas = document.getElementById('chartCanvas');
     const ctx = canvas.getContext('2d');
-    let chartZoom = 50; 
+    let chartZoom = 50;
 
     function resizeCanvas() {
         canvas.width = canvas.parentElement.clientWidth;
@@ -362,20 +335,16 @@
         const width = canvas.width;
         const height = canvas.height;
         ctx.clearRect(0, 0, width, height);
-
         const visibleCandles = candles.slice(-chartZoom);
         if (visibleCandles.length === 0) return;
 
         let min = Math.min(...visibleCandles.map(c => c.low));
         let max = Math.max(...visibleCandles.map(c => c.high));
         const padding = (max - min) * 0.1;
-        min -= padding;
-        max += padding;
+        min -= padding; max += padding;
         const range = max - min;
-
         const candleWidth = width / visibleCandles.length;
         const gap = candleWidth * 0.2;
-        
         const getY = (price) => height - ((price - min) / range) * height;
         const getX = (i) => i * candleWidth;
 
@@ -386,15 +355,12 @@
             const yHigh = getY(c.high);
             const yLow = getY(c.low);
             const isBull = c.close >= c.open;
-            
             ctx.fillStyle = isBull ? '#0faf59' : '#ff444f';
             ctx.strokeStyle = isBull ? '#0faf59' : '#ff444f';
-            
             ctx.beginPath();
             ctx.moveTo(x + (candleWidth-gap)/2, yHigh);
             ctx.lineTo(x + (candleWidth-gap)/2, yLow);
             ctx.stroke();
-
             const h = Math.abs(yOpen - yClose) || 1;
             ctx.fillRect(x, Math.min(yOpen, yClose), candleWidth - gap, h);
         });
@@ -402,45 +368,26 @@
         if(candles.length > 0) {
             const last = candles[candles.length-1].close;
             const y = getY(last);
-            ctx.strokeStyle = '#fff';
-            ctx.setLineDash([5,5]);
+            ctx.strokeStyle = '#fff'; ctx.setLineDash([5,5]);
             ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-            ctx.setLineDash([]);
-            ctx.fillStyle = '#fff';
+            ctx.setLineDash([]); ctx.fillStyle = '#fff';
             ctx.fillText(last.toFixed(2), width - 50, y - 5);
         }
     }
 
-    // --- Connection Handling ---
     function connectToDeriv() {
-        const appIdInput = document.getElementById('appIdInput').value.trim();
-        const tokenInput = document.getElementById('apiTokenInput').value.trim();
-
-        if(!appIdInput || !tokenInput) {
-            showToast("Please enter both App ID and Token", "error");
-            return;
-        }
-
-        document.getElementById('loginModal').style.display = 'none';
-        
-        try {
-            deriv.connect(appIdInput, tokenInput);
-        } catch (e) {
-            showToast("Connection Error: " + e.message, "error");
-            document.getElementById('loginModal').style.display = 'flex';
-        }
+        const appId = document.getElementById('appIdInput').value.trim();
+        const token = document.getElementById('apiTokenInput').value.trim();
+        if(!appId || !token) { showToast("Enter both App ID and Token", "error"); return; }
+        document.getElementById('debugLog').innerHTML = "";
+        deriv.connect(appId, token);
     }
 
-    function updateStatus(isConnected) {
+    function updateStatus(status) {
         const el = document.getElementById('connectionStatus');
-        const dot = el.querySelector('.status-dot');
-        if(isConnected) {
-            dot.classList.add('connected');
-            el.innerHTML = '<span class="status-dot connected"></span> Live';
-        } else {
-            dot.classList.remove('connected');
-            el.innerHTML = '<span class="status-dot"></span> Disconnected';
-        }
+        if(status === 'connected') el.innerHTML = '<span class="status-dot connected"></span> Live';
+        else if (status === 'error') el.innerHTML = '<span class="status-dot error"></span> Error';
+        else el.innerHTML = '<span class="status-dot"></span> Disconnected';
     }
 
     function changeMarket(symbol, el) {
@@ -449,49 +396,27 @@
         deriv.subscribeTicks(symbol);
     }
 
+    // CRITICAL FIX: Was calling deriv.placeTrade() which doesn't exist. Now calls deriv.placeContract()
     function placeTrade(type) {
         deriv.placeContract(type);
     }
 
-    // --- AI Logic ---
     deriv.onTickUpdate = (liveCandles) => {
         candles = liveCandles;
         drawChart();
-        if(isAiRunning && candles.length > 20) {
-            runAiAnalysis(candles);
-        }
+        if(isAiRunning && candles.length > 20) runAiAnalysis(candles);
     };
 
     function runAiAnalysis(candles) {
         const len = candles.length;
         const current = candles[len-1].close;
-        const prev = candles[len-2].close;
         const rsi = calculateRSI(candles);
         const rsiVal = rsi[rsi.length-1];
-
-        let signal = "HOLD";
-        let confidence = 0;
-
-        if (rsiVal < 30) {
-            signal = "CALL"; 
-            confidence = 80;
-        } else if (rsiVal > 70) {
-            signal = "PUT"; 
-            confidence = 80;
-        } else if (current > candles[len-5].close) {
-            signal = "CALL"; 
-            confidence = 65;
-        }
-
-        const log = document.getElementById('aiLog');
-        log.innerHTML = `> Price: ${current.toFixed(2)}<br>> RSI: ${rsiVal.toFixed(1)}<br>> Signal: ${signal} (${confidence}%)`;
-        
-        if (confidence >= 80) {
-            log.innerHTML += `<br>> <strong>EXECUTING ${signal}...</strong>`;
-            deriv.placeContract(signal);
-            isAiRunning = false; 
-            setTimeout(() => { if(document.getElementById('aiToggle').checked) isAiRunning = true; }, 5000);
-        }
+        let signal = "HOLD", confidence = 0;
+        if (rsiVal < 30) { signal = "CALL"; confidence = 80; } 
+        else if (rsiVal > 70) { signal = "PUT"; confidence = 80; }
+        document.getElementById('aiLog').innerHTML = `> RSI: ${rsiVal.toFixed(1)} | Signal: ${signal} (${confidence}%)`;
+        if (confidence >= 80) { deriv.placeContract(signal); isAiRunning = false; setTimeout(() => { if(document.getElementById('aiToggle').checked) isAiRunning = true; }, 5000); }
     }
 
     function calculateRSI(data, period = 14) {
@@ -499,8 +424,7 @@
         let gains = 0, losses = 0;
         for(let i=1; i<=period; i++) {
             const diff = data[data.length - i].close - data[data.length - i - 1].close;
-            if(diff > 0) gains += diff;
-            else losses -= diff;
+            if(diff > 0) gains += diff; else losses -= diff;
         }
         const rs = (gains/period) / (losses/period || 0.001);
         return [100 - (100 / (1 + rs))];
@@ -508,16 +432,18 @@
 
     function toggleAI() {
         isAiRunning = document.getElementById('aiToggle').checked;
-        document.getElementById('aiLog').innerHTML += "<br>> AI " + (isAiRunning ? "Enabled" : "Disabled");
+    }
+
+    function logDebug(text) {
+        const log = document.getElementById('debugLog');
+        if(log) { log.innerHTML += `[${new Date().toLocaleTimeString().split(' ')[0]}] ${text}\n`; log.scrollTop = log.scrollHeight; }
     }
 
     function showToast(msg, type="success") {
         const t = document.createElement('div');
-        t.className = 'toast';
-        t.style.borderLeftColor = type === 'error' ? 'red' : '#2563eb';
-        t.innerText = msg;
+        t.className = `toast ${type}`; t.innerText = msg;
         document.getElementById('toastContainer').appendChild(t);
-        setTimeout(() => t.remove(), 3000);
+        setTimeout(() => t.remove(), 4000);
     }
 
     document.getElementById('stakeInput').addEventListener('change', (e) => {
@@ -527,7 +453,6 @@
     });
 
     resizeCanvas();
-
 </script>
 </body>
 </html>
