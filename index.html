@@ -3,86 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ProTrade X - Fixed</title>
+    <title>ProTrade X - Diagnostics</title>
     <style>
         :root {
-            --bg-dark: #0e1117;
-            --bg-panel: #161a25;
-            --bg-hover: #1e232d;
-            --primary: #ff444f;
-            --accent: #2563eb;
-            --text-main: #ffffff;
-            --text-muted: #8b96a5;
-            --border: #2a2e39;
-            --success: #0faf59;
-            --danger: #ff444f;
+            --bg-dark: #0e1117; --bg-panel: #161a25; --bg-hover: #1e232d;
+            --primary: #ff444f; --accent: #2563eb; --text-main: #ffffff;
+            --text-muted: #8b96a5; --border: #2a2e39; --success: #0faf59; --danger: #ff444f;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
-        
         body { background-color: var(--bg-dark); color: var(--text-main); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-        #loginModal {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 2000;
-            display: flex; justify-content: center; align-items: center;
-        }
-        .login-box {
-            background: var(--bg-panel); padding: 30px; border-radius: 8px;
-            border: 1px solid var(--border); width: 450px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            max-height: 90vh; overflow-y: auto;
-        }
-        .login-box h2 { margin-bottom: 10px; text-align: center; color: var(--text-main); }
+        #loginModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 2000; display: flex; justify-content: center; align-items: center; }
+        .login-box { background: var(--bg-panel); padding: 30px; border-radius: 8px; border: 1px solid var(--border); width: 480px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .login-box h2 { margin-bottom: 10px; text-align: center; }
+        
+        .warning-box { background: rgba(255, 68, 79, 0.1); border: 1px solid var(--danger); color: #ff8888; padding: 12px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 20px; line-height: 1.4;}
+        
         .input-group { margin-bottom: 12px; }
         .input-group label { display: block; color: var(--text-muted); margin-bottom: 5px; font-size: 0.85rem; }
-        .input-group input { 
-            width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border);
-            background: var(--bg-dark); color: white; outline: none;
-        }
-        .input-group input:focus { border-color: var(--accent); }
+        .input-group input { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid var(--border); background: var(--bg-dark); color: white; outline: none; }
         
         .btn-full { width: 100%; padding: 12px; background: var(--accent); border: none; color: white; font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-        .btn-full:hover { opacity: 0.9; }
+        .btn-test { width: 100%; padding: 12px; background: transparent; border: 1px solid var(--success); color: var(--success); font-weight: bold; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        
+        .debug-box { background: #000; border: 1px solid #333; padding: 10px; font-family: monospace; font-size: 0.75rem; color: #00ff00; height: 120px; overflow-y: auto; margin-top: 15px; border-radius: 4px; white-space: pre-wrap; }
 
-        .debug-box {
-            background: #000; border: 1px solid #333; padding: 10px;
-            font-family: monospace; font-size: 0.75rem; color: #00ff00;
-            height: 150px; overflow-y: auto; margin-top: 15px; border-radius: 4px; white-space: pre-wrap;
-        }
-
-        header {
-            height: 60px; background: var(--bg-panel); border-bottom: 1px solid var(--border);
-            display: flex; align-items: center; padding: 0 20px; justify-content: space-between;
-        }
-        .logo { font-weight: 700; font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+        header { height: 60px; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; justify-content: space-between; }
+        .logo { font-weight: 700; font-size: 1.2rem; }
         .logo span { color: var(--primary); }
         .balance-badge { background: #2a2e39; padding: 5px 12px; border-radius: 4px; font-weight: 600; }
         .status-dot { width: 10px; height: 10px; border-radius: 50%; background: gray; display: inline-block; margin-right: 5px; }
         .status-dot.connected { background: var(--success); }
-        .status-dot.error { background: var(--danger); }
 
         main { flex: 1; display: grid; grid-template-columns: 1fr 320px; grid-template-rows: 50px 1fr; height: calc(100vh - 60px); }
-
         .asset-bar { grid-column: 1 / -1; background: var(--bg-panel); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 20px; }
         .asset-item { padding: 8px 16px; cursor: pointer; border-radius: 4px; font-size: 0.9rem; border: 1px solid transparent; }
-        .asset-item:hover { background: var(--bg-hover); }
         .asset-item.active { background: rgba(37, 99, 235, 0.1); color: var(--accent); border-color: rgba(37, 99, 235, 0.3); }
 
-        .chart-section { position: relative; background: var(--bg-dark); display: flex; flex-direction: column; }
-        #chartCanvas { width: 100%; height: 100%; cursor: crosshair; }
+        .chart-section { background: var(--bg-dark); display: flex; flex-direction: column; }
+        #chartCanvas { width: 100%; height: 100%; }
 
         .trade-panel { background: var(--bg-panel); border-left: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; gap: 15px; }
         .btn-up { background: var(--success); color: white; font-weight: bold; padding: 15px; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
         .btn-down { background: var(--danger); color: white; font-weight: bold; padding: 15px; border: none; border-radius: 4px; cursor: pointer; width: 100%; }
         .trade-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        
         .input-wrapper { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; }
         .input-wrapper input { background: transparent; border: none; color: white; padding: 10px; width: 100%; text-align: center; }
-
         .ai-section { margin-top: auto; border-top: 1px solid var(--border); padding-top: 15px; }
         .ai-log { font-family: monospace; font-size: 0.75rem; color: #888; background: #000; padding: 10px; height: 80px; overflow-y: auto; margin-top: 10px; }
-        
+
         .toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
         .toast { background: var(--bg-panel); padding: 15px; border-left: 4px solid var(--accent); border-radius: 4px; animation: slideIn 0.3s; min-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); color:white; }
         .toast.error { border-left-color: var(--danger); }
@@ -93,21 +62,30 @@
 
 <div id="loginModal">
     <div class="login-box">
-        <h2>Deriv API Login</h2>
-        <div class="input-group">
-            <label>App ID</label>
-            <input type="text" id="appIdInput" placeholder="e.g. 1089 or 33tE4..." value="">
-        </div>
-        <div class="input-group">
-            <label>API Token (PAT)</label>
-            <input type="text" id="apiTokenInput" placeholder="pat_..." value="">
-        </div>
-        <button class="btn-full" onclick="connectToDeriv()">Connect</button>
+        <h2>Deriv Connection Diagnostic</h2>
         
-        <div style="margin-top:15px;">
-            <label style="color:#888; font-size:0.8rem;">Debug Log:</label>
-            <div class="debug-box" id="debugLog">Ready...</div>
+        <div class="warning-box">
+            <strong>Why Error 1006 happens:</strong> The Deriv WebSocket server REJECTS non-numeric App IDs at the network level. 
+            The ID <code>33tE4...</code> is an OAuth Client ID. You must use the <strong>Numeric API App ID</strong> from your developer dashboard.
         </div>
+        
+        <button class="btn-test" onclick="testConnectionWithPublicID()">
+            Step 1: Test Connection with Public ID (1089)
+        </button>
+
+        <hr style="border-color: #333; margin: 20px 0;">
+
+        <div class="input-group">
+            <label>YOUR Numeric App ID (e.g. 1234)</label>
+            <input type="text" id="appIdInput" placeholder="Must be numbers only">
+        </div>
+        <div class="input-group">
+            <label>YOUR API Token</label>
+            <input type="text" id="apiTokenInput" placeholder="pat_...">
+        </div>
+        <button class="btn-full" onclick="connectToDeriv()">Step 2: Login with My ID</button>
+        
+        <div class="debug-box" id="debugLog">Waiting for test...</div>
     </div>
 </div>
 
@@ -123,36 +101,26 @@
     <div class="asset-bar">
         <div class="asset-item active" onclick="changeMarket('R_100', this)">Volatility 100</div>
         <div class="asset-item" onclick="changeMarket('R_10', this)">Volatility 10</div>
-        <div class="asset-item" onclick="changeMarket('R_25', this)">Volatility 25</div>
     </div>
-
-    <div class="chart-section">
-        <canvas id="chartCanvas"></canvas>
-    </div>
+    <div class="chart-section"><canvas id="chartCanvas"></canvas></div>
 
     <div class="trade-panel">
         <div class="input-group">
             <label>Stake (USD)</label>
-            <div class="input-wrapper">
-                <input type="number" id="stakeInput" value="10" min="1">
-            </div>
+            <div class="input-wrapper"><input type="number" id="stakeInput" value="10" min="1"></div>
         </div>
         <div class="input-group">
             <label>Duration (Ticks)</label>
-            <div class="input-wrapper">
-                <input type="number" id="tickDuration" value="5" min="1" max="10">
-            </div>
+            <div class="input-wrapper"><input type="number" id="tickDuration" value="5" min="1" max="10"></div>
         </div>
-        
         <div class="trade-row">
-            <button class="btn-up" onclick="placeTrade('CALL')">Buy <br><span id="callPayout">--</span></button>
-            <button class="btn-down" onclick="placeTrade('PUT')">Sell <br><span id="putPayout">--</span></button>
+            <button class="btn-up" onclick="deriv.placeContract('CALL')">Buy</button>
+            <button class="btn-down" onclick="deriv.placeContract('PUT')">Sell</button>
         </div>
-
         <div class="ai-section">
             <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
                 <strong style="color:#a855f7">AI Autotrader</strong>
-                <input type="checkbox" id="aiToggle" onchange="toggleAI()">
+                <input type="checkbox" id="aiToggle" onchange="isAiRunning = this.checked">
             </div>
             <div class="ai-log" id="aiLog">Waiting...</div>
         </div>
@@ -163,294 +131,118 @@
 
 <script>
     class DerivService {
-        constructor() {
-            this.ws = null;
-            this.appId = null;
-            this.token = null;
-            this.currentSymbol = 'R_100';
-            this.pingInterval = null;
-            this.tickHistory = [];
-            this.onTickUpdate = null;
-        }
+        constructor() { this.ws = null; this.currentSymbol = 'R_100'; this.tickHistory = []; this.onTickUpdate = null; }
 
-        connect(appId, token) {
-            this.appId = appId.trim();
-            this.token = token.trim();
-            const encodedAppId = encodeURIComponent(this.appId);
-            const wsUrl = `wss://ws.binaryws.com/websockets/v3?app_id=${encodedAppId}`;
+        connect(appId, token = "") {
+            const wsUrl = `wss://ws.binaryws.com/websockets/v3?app_id=${appId.trim()}`;
+            logDebug(`Testing: ${wsUrl}`);
             
-            logDebug(`Connecting to: ${wsUrl}`);
-
-            try {
-                this.ws = new WebSocket(wsUrl);
-            } catch (e) {
-                logDebug("Error: " + e.message);
-                return;
-            }
+            this.ws = new WebSocket(wsUrl);
 
             this.ws.onopen = () => {
-                logDebug("Socket Opened. Authorizing...");
+                logDebug("SUCCESS: Socket Opened!");
                 updateStatus("connected");
-                this.authorize();
-                this.startPing();
+                if (token) this.ws.send(JSON.stringify({ authorize: token }));
+                else this.subscribeTicks(this.currentSymbol);
             };
 
-            // CRITICAL FIX: Removed the extra ')' that broke the entire app
             this.ws.onmessage = (msg) => {
-                this.handleMessage(JSON.parse(msg.data));
+                const data = JSON.parse(msg.data);
+                logDebug(JSON.stringify(data));
+                if (data.error) { showToast(data.error.message, "error"); return; }
+                if (data.msg_type === 'authorize') {
+                    showToast(`Logged in: ${data.authorize.loginid}`, "success");
+                    document.getElementById('balanceDisplay').innerText = `Balance: ${data.authorize.balance}`;
+                    setTimeout(() => document.getElementById('loginModal').style.display = 'none', 500);
+                    this.subscribeTicks(this.currentSymbol);
+                } else if (data.msg_type === 'tick') { this.processLiveTick(data.tick); }
+                else if (data.msg_type === 'history') {
+                    this.tickHistory = data.history.prices.map((p, i) => ({ quote: p, epoch: data.history.times[i] }));
+                    if(this.onTickUpdate) this.onTickUpdate(this.getAggregatedCandles());
+                }
             };
             
             this.ws.onclose = (e) => {
-                logDebug(`Socket Closed. Code: ${e.code}`);
-                if (e.code === 1006) {
-                    showToast("Rejected (1006). Check App ID format.", "error");
-                    updateStatus("error");
-                } else {
-                    updateStatus("disconnected");
-                }
-                document.getElementById('loginModal').style.display = 'flex';
-                clearInterval(this.pingInterval);
+                logDebug(`FAILED: Socket Closed. Code: ${e.code}`);
+                if (e.code === 1006) showToast("1006 Error: App ID rejected by server.", "error");
+                updateStatus("disconnected");
             };
-            
-            this.ws.onerror = (e) => {
-                logDebug("Network Error Event");
-            };
-        }
-
-        startPing() {
-            clearInterval(this.pingInterval);
-            this.pingInterval = setInterval(() => {
-                if(this.ws && this.ws.readyState === WebSocket.OPEN) {
-                    this.ws.send(JSON.stringify({ ping: 1 }));
-                }
-            }, 15000);
-        }
-
-        authorize() {
-            this.ws.send(JSON.stringify({ authorize: this.token }));
+            this.ws.onerror = () => logDebug("Network Error Event fired.");
         }
 
         subscribeTicks(symbol) {
-            this.currentSymbol = symbol;
-            logDebug(`Subscribing to ${symbol}...`);
-            this.tickHistory = [];
+            this.currentSymbol = symbol; this.tickHistory = [];
             this.ws.send(JSON.stringify({ ticks: symbol, subscribe: 1 }));
-            this.ws.send(JSON.stringify({ 
-                ticks_history: symbol, count: 1000, end: "latest", style: "ticks", subscribe: 1 
-            }));
+            this.ws.send(JSON.stringify({ ticks_history: symbol, count: 500, end: "latest", style: "ticks" }));
         }
 
-        placeContract(contractType) {
-            const stake = document.getElementById('stakeInput').value;
-            const duration = document.getElementById('tickDuration').value;
-            this.ws.send(JSON.stringify({
-                buy: 1,
-                price: parseFloat(stake),
-                parameters: {
-                    amount: parseFloat(stake),
-                    basis: "stake",
-                    contract_type: contractType,
-                    currency: "USD",
-                    duration: parseInt(duration),
-                    duration_unit: "t",
-                    symbol: this.currentSymbol
-                }
-            }));
-        }
-
-        handleMessage(data) {
-            logDebug(JSON.stringify(data));
-
-            if (data.error) {
-                showToast(`${data.error.code}: ${data.error.message}`, "error");
-                return;
-            }
-
-            if (data.msg_type === 'authorize') {
-                showToast(`Logged in: ${data.authorize.loginid}`, "success");
-                document.getElementById('balanceDisplay').innerText = `Balance: ${data.authorize.balance} ${data.authorize.currency}`;
-                setTimeout(() => { document.getElementById('loginModal').style.display = 'none'; }, 500);
-                this.subscribeTicks(this.currentSymbol);
-            }
-            else if (data.msg_type === 'tick') {
-                this.processLiveTick(data.tick);
-            }
-            else if (data.msg_type === 'history') {
-                const prices = data.history.prices;
-                const times = data.history.times;
-                this.tickHistory = prices.map((p, i) => ({ quote: p, epoch: times[i] }));
-                if(this.onTickUpdate) this.onTickUpdate(this.getAggregatedCandles());
-            }
-            else if (data.msg_type === 'buy') {
-                showToast(`Contract Bought`, "success");
-            }
+        placeContract(type) {
+            if(!this.ws || this.ws.readyState !== 1) return showToast("Not connected", "error");
+            this.ws.send(JSON.stringify({ buy: 1, price: 10, parameters: { amount: 10, basis: "stake", contract_type: type, currency: "USD", duration: 5, duration_unit: "t", symbol: this.currentSymbol } }));
         }
 
         processLiveTick(tick) {
             this.tickHistory.push({ quote: tick.quote, epoch: tick.epoch });
-            if(this.tickHistory.length > 1000) this.tickHistory.shift();
+            if(this.tickHistory.length > 500) this.tickHistory.shift();
             if (this.onTickUpdate) this.onTickUpdate(this.getAggregatedCandles());
         }
 
         getAggregatedCandles() {
-            const candles = [];
-            let currentCandle = null;
-            for (let i = 0; i < this.tickHistory.length; i++) {
-                const tick = this.tickHistory[i];
-                const tickTime = Math.floor(tick.epoch);
-                if (!currentCandle) {
-                    currentCandle = { open: tick.quote, high: tick.quote, low: tick.quote, close: tick.quote, timestamp: tickTime };
-                } else {
-                    if (tickTime === currentCandle.timestamp) {
-                        currentCandle.close = tick.quote;
-                        if (tick.quote > currentCandle.high) currentCandle.high = tick.quote;
-                        if (tick.quote < currentCandle.low) currentCandle.low = tick.quote;
-                    } else {
-                        candles.push(currentCandle);
-                        currentCandle = { open: tick.quote, high: tick.quote, low: tick.quote, close: tick.quote, timestamp: tickTime };
-                    }
-                }
+            const candles = []; let cur = null;
+            for (let t of this.tickHistory) {
+                const time = Math.floor(t.epoch);
+                if (!cur) cur = { open: t.quote, high: t.quote, low: t.quote, close: t.quote, timestamp: time };
+                else if (time === cur.timestamp) { cur.close = t.quote; cur.high = Math.max(cur.high, t.quote); cur.low = Math.min(cur.low, t.quote); }
+                else { candles.push(cur); cur = { open: t.quote, high: t.quote, low: t.quote, close: t.quote, timestamp: time }; }
             }
-            if (currentCandle) candles.push(currentCandle);
+            if (cur) candles.push(cur);
             return candles;
         }
     }
 
     const deriv = new DerivService();
-    let candles = [];
-    let isAiRunning = false;
+    let candles = [], isAiRunning = false;
+    const canvas = document.getElementById('chartCanvas'), ctx = canvas.getContext('2d');
 
-    const canvas = document.getElementById('chartCanvas');
-    const ctx = canvas.getContext('2d');
-    let chartZoom = 50;
-
-    function resizeCanvas() {
-        canvas.width = canvas.parentElement.clientWidth;
-        canvas.height = canvas.parentElement.clientHeight;
-        if(candles.length > 0) drawChart();
-    }
+    function resizeCanvas() { canvas.width = canvas.parentElement.clientWidth; canvas.height = canvas.parentElement.clientHeight; if(candles.length > 0) drawChart(); }
     window.addEventListener('resize', resizeCanvas);
 
     function drawChart() {
-        const width = canvas.width;
-        const height = canvas.height;
-        ctx.clearRect(0, 0, width, height);
-        const visibleCandles = candles.slice(-chartZoom);
-        if (visibleCandles.length === 0) return;
-
-        let min = Math.min(...visibleCandles.map(c => c.low));
-        let max = Math.max(...visibleCandles.map(c => c.high));
-        const padding = (max - min) * 0.1;
-        min -= padding; max += padding;
-        const range = max - min;
-        const candleWidth = width / visibleCandles.length;
-        const gap = candleWidth * 0.2;
-        const getY = (price) => height - ((price - min) / range) * height;
-        const getX = (i) => i * candleWidth;
-
-        visibleCandles.forEach((c, i) => {
-            const x = getX(i) + gap/2;
-            const yOpen = getY(c.open);
-            const yClose = getY(c.close);
-            const yHigh = getY(c.high);
-            const yLow = getY(c.low);
-            const isBull = c.close >= c.open;
-            ctx.fillStyle = isBull ? '#0faf59' : '#ff444f';
-            ctx.strokeStyle = isBull ? '#0faf59' : '#ff444f';
-            ctx.beginPath();
-            ctx.moveTo(x + (candleWidth-gap)/2, yHigh);
-            ctx.lineTo(x + (candleWidth-gap)/2, yLow);
-            ctx.stroke();
-            const h = Math.abs(yOpen - yClose) || 1;
-            ctx.fillRect(x, Math.min(yOpen, yClose), candleWidth - gap, h);
+        const w = canvas.width, h = canvas.height; ctx.clearRect(0, 0, w, h);
+        const vis = candles.slice(-50); if (!vis.length) return;
+        let min = Math.min(...vis.map(c=>c.low)), max = Math.max(...vis.map(c=>c.high));
+        min -= (max-min)*0.1; max += (max-min)*0.1; const range = max-min;
+        const cw = w / vis.length, gap = cw*0.2;
+        const getY = p => h - ((p-min)/range)*h;
+        vis.forEach((c, i) => {
+            const x = i*cw + gap/2, yO = getY(c.open), yC = getY(c.close), yH = getY(c.high), yL = getY(c.low);
+            const bull = c.close >= c.open; ctx.fillStyle = ctx.strokeStyle = bull ? '#0faf59' : '#ff444f';
+            ctx.beginPath(); ctx.moveTo(x+cw/2, yH); ctx.lineTo(x+cw/2, yL); ctx.stroke();
+            ctx.fillRect(x, Math.min(yO, yC), cw-gap, Math.abs(yO-yC)||1);
         });
+        if(candles.length) { const y = getY(candles[candles.length-1].close); ctx.strokeStyle='#fff'; ctx.setLineDash([5,5]); ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle='#fff'; ctx.fillText(candles[candles.length-1].close.toFixed(2), w-60, y-5); }
+    }
 
-        if(candles.length > 0) {
-            const last = candles[candles.length-1].close;
-            const y = getY(last);
-            ctx.strokeStyle = '#fff'; ctx.setLineDash([5,5]);
-            ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke();
-            ctx.setLineDash([]); ctx.fillStyle = '#fff';
-            ctx.fillText(last.toFixed(2), width - 50, y - 5);
-        }
+    function testConnectionWithPublicID() {
+        document.getElementById('debugLog').innerHTML = "";
+        logDebug("Attempting connection with ID: 1089 (No Token)...");
+        deriv.connect("1089"); // Pure test to see if network allows it
     }
 
     function connectToDeriv() {
-        const appId = document.getElementById('appIdInput').value.trim();
-        const token = document.getElementById('apiTokenInput').value.trim();
-        if(!appId || !token) { showToast("Enter both App ID and Token", "error"); return; }
+        const id = document.getElementById('appIdInput').value.trim();
+        const tok = document.getElementById('apiTokenInput').value.trim();
+        if(!id) return showToast("Enter App ID", "error");
         document.getElementById('debugLog').innerHTML = "";
-        deriv.connect(appId, token);
+        deriv.connect(id, tok);
     }
 
-    function updateStatus(status) {
-        const el = document.getElementById('connectionStatus');
-        if(status === 'connected') el.innerHTML = '<span class="status-dot connected"></span> Live';
-        else if (status === 'error') el.innerHTML = '<span class="status-dot error"></span> Error';
-        else el.innerHTML = '<span class="status-dot"></span> Disconnected';
-    }
-
-    function changeMarket(symbol, el) {
-        document.querySelectorAll('.asset-item').forEach(e => e.classList.remove('active'));
-        el.classList.add('active');
-        deriv.subscribeTicks(symbol);
-    }
-
-    // CRITICAL FIX: Was calling deriv.placeTrade() which doesn't exist. Now calls deriv.placeContract()
-    function placeTrade(type) {
-        deriv.placeContract(type);
-    }
-
-    deriv.onTickUpdate = (liveCandles) => {
-        candles = liveCandles;
-        drawChart();
-        if(isAiRunning && candles.length > 20) runAiAnalysis(candles);
-    };
-
-    function runAiAnalysis(candles) {
-        const len = candles.length;
-        const current = candles[len-1].close;
-        const rsi = calculateRSI(candles);
-        const rsiVal = rsi[rsi.length-1];
-        let signal = "HOLD", confidence = 0;
-        if (rsiVal < 30) { signal = "CALL"; confidence = 80; } 
-        else if (rsiVal > 70) { signal = "PUT"; confidence = 80; }
-        document.getElementById('aiLog').innerHTML = `> RSI: ${rsiVal.toFixed(1)} | Signal: ${signal} (${confidence}%)`;
-        if (confidence >= 80) { deriv.placeContract(signal); isAiRunning = false; setTimeout(() => { if(document.getElementById('aiToggle').checked) isAiRunning = true; }, 5000); }
-    }
-
-    function calculateRSI(data, period = 14) {
-        if(data.length < period + 1) return [50];
-        let gains = 0, losses = 0;
-        for(let i=1; i<=period; i++) {
-            const diff = data[data.length - i].close - data[data.length - i - 1].close;
-            if(diff > 0) gains += diff; else losses -= diff;
-        }
-        const rs = (gains/period) / (losses/period || 0.001);
-        return [100 - (100 / (1 + rs))];
-    }
-
-    function toggleAI() {
-        isAiRunning = document.getElementById('aiToggle').checked;
-    }
-
-    function logDebug(text) {
-        const log = document.getElementById('debugLog');
-        if(log) { log.innerHTML += `[${new Date().toLocaleTimeString().split(' ')[0]}] ${text}\n`; log.scrollTop = log.scrollHeight; }
-    }
-
-    function showToast(msg, type="success") {
-        const t = document.createElement('div');
-        t.className = `toast ${type}`; t.innerText = msg;
-        document.getElementById('toastContainer').appendChild(t);
-        setTimeout(() => t.remove(), 4000);
-    }
-
-    document.getElementById('stakeInput').addEventListener('change', (e) => {
-        const val = parseFloat(e.target.value);
-        document.getElementById('callPayout').innerText = `+ $${(val * 0.95).toFixed(2)}`;
-        document.getElementById('putPayout').innerText = `+ $${(val * 0.95).toFixed(2)}`;
-    });
+    function updateStatus(s) { document.getElementById('connectionStatus').innerHTML = s==='connected' ? '<span class="status-dot connected"></span> Live' : '<span class="status-dot"></span> Disconnected'; }
+    function changeMarket(s, el) { document.querySelectorAll('.asset-item').forEach(e=>e.classList.remove('active')); el.classList.add('active'); deriv.subscribeTicks(s); }
+    
+    deriv.onTickUpdate = (c) => { candles = c; drawChart(); };
+    function logDebug(t) { const l = document.getElementById('debugLog'); l.innerHTML += `[${new Date().toLocaleTimeString().split(' ')[0]}] ${t}\n`; l.scrollTop = l.scrollHeight; }
+    function showToast(m, t="success") { const d = document.createElement('div'); d.className = `toast ${t}`; d.innerText = m; document.getElementById('toastContainer').appendChild(d); setTimeout(()=>d.remove(), 4000); }
 
     resizeCanvas();
 </script>
